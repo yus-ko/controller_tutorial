@@ -1,0 +1,21 @@
+<launch>
+   <group ns="/robot_6">
+      <node pkg="controller_tutorial" name="controller_test" type="controller_test" output="screen">
+
+         <param name="topic_cmd"    value="cmd_vel"/>
+         <param name="topic_odom"    value="odom"/>
+         <param name="topic_goal"    value="goal"/>
+         
+         <!-- 移動制御のパラメータ -->
+         <param name="gain_p"                                  value="1.0"/>
+         <param name="gain_i"                                  value="0.1"/>
+         <param name="gain_d"                                  value="0.001"/>
+         <param name="stop_margin_angle"                       value="0.01"/>
+         <param name="stop_margin_distance"                    value="0.03"/>
+         <param name="max_linear_velocity"                     value="0.5"/>
+         <param name="max_angular_velocity"                    value="0.6"/>
+      </node>
+
+      <node pkg="rviz" type="rviz" name="rviz" required="true" args="-d $(find controller_tutorial)/rviz/controller_tutorial.rviz"/>
+   </group>
+</launch>
