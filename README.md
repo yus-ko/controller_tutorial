@@ -4,7 +4,7 @@
  
 ```bash
 cd ~/catkin_ws/src
-git clone -b initbuild https://github.com/yus-ko/potbot
+git clone https://github.com/yus-ko/potbot
 git clone https://github.com/yus-ko/controller_tutorial
 cd potbot
 ls | grep -vE 'potbot_lib|potbot_msgs' | xargs rm -r
