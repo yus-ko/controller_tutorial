@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <potbot_lib/DiffDriveController.h>
+#include <potbot_msgs/ObstacleArray.h>
 #include <dynamic_reconfigure/server.h>
 #include <controller_tutorial/controller_tutorialConfig.h>
 #include <geometry_msgs/PoseArray.h>
@@ -60,6 +61,7 @@ int main(int argc,char **argv){
 
 	ros::Publisher pub_odom					= nh.advertise<nav_msgs::Odometry>("odom", 1);
 	ros::Publisher pub_particles			= nh.advertise<geometry_msgs::PoseArray>("particles", 1);
+	ros::Publisher pub_particles_state		= nh.advertise<potbot_msgs::ObstacleArray>("particles_state", 1);
 
 	ros::Subscriber sub_inipose				= nh.subscribe("initialpose",1,inipose_callback);
 	ros::Subscriber sub_goal				= nh.subscribe("move_base_simple/goal",1,goal_callback);
@@ -77,7 +79,15 @@ int main(int argc,char **argv){
 
 	geometry_msgs::PoseArray particles_msg;
 	particles_msg.header.frame_id = robot_pose.header.frame_id;
-	for (size_t i = 0; i < particle_num; i++) particles_msg.poses.push_back(robot_pose.pose.pose);
+	potbot_msgs::ObstacleArray particle_state_msg;
+	particle_state_msg.header.frame_id = robot_pose.header.frame_id;
+	for (size_t i = 0; i < particle_num; i++) 
+	{
+		particles_msg.poses.push_back(robot_pose.pose.pose);
+		potbot_msgs::Obstacle p;
+		p.pose = robot_pose.pose.pose;
+		particle_state_msg.data.push_back(p);
+	};
 
 	for (auto& robo : g_robot)
 	{
@@ -99,6 +109,7 @@ int main(int argc,char **argv){
 		g_robot[0].to_msg(robot_pose);
 
 		particles_msg.header = robot_pose.header;
+		particle_state_msg.header = robot_pose.header;
 		double v_truth = robot_pose.twist.twist.linear.x;
 		double omega_truth = robot_pose.twist.twist.angular.z;
 		if (v_truth != 0 || omega_truth != 0)
@@ -114,11 +125,16 @@ int main(int argc,char **argv){
 				g_robot[i].set_msg(particle);
 				g_robot[i].update();
 				particles_msg.poses[i-1] = particle.pose.pose;
+
+				particle_state_msg.data[i-1].pose = particle.pose.pose;
+				particle_state_msg.data[i-1].twist = particle.twist.twist;
+
 			}
 		}
 
 		pub_odom.publish(robot_pose);
 		pub_particles.publish(particles_msg);
+		pub_particles_state.publish(particle_state_msg);
         
 		ros::spinOnce();
 		rate.sleep();
