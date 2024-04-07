@@ -1,12 +1,19 @@
 <launch>
-   <group ns="/robot_0">
-      <node pkg="controller_tutorial" name="controller_tutorial_test" type="controller_tutorial_test" output="screen">
+   <arg name="multi_robot"             default="/robot_0"/>
+   <arg name="path_csvfile"            default="$(find controller_tutorial)/path/sin.csv"/>
+   <arg name="use_rviz"                default="true"/>
+
+   <group ns="$(arg multi_robot)">
+      <node pkg="controller_tutorial"  name="controller_tutorial_test" type="controller_tutorial_test" output="screen">
+
+         <param name="path_csvfile"    value="$(arg path_csvfile)"/>
 
          <param name="topic_cmd"       value="cmd_vel"/>
          <param name="topic_odom"      value="odom"/>
          <param name="topic_goal"      value="goal"/>
          
          <!-- 移動制御のパラメータ -->
+         <param name="distance_to_lookahead_point"             value="0.3"/>
          <param name="gain_p"                                  value="1.0"/>
          <param name="gain_i"                                  value="0.1"/>
          <param name="gain_d"                                  value="0.001"/>
@@ -15,7 +22,10 @@
          <param name="max_linear_velocity"                     value="0.3"/>
          <param name="max_angular_velocity"                    value="0.3"/>
       </node>
+      
+      <group if="$(arg use_rviz)">
+         <node pkg="rviz" type="rviz" name="rviz" required="true" args="-d $(find controller_tutorial)/rviz/controller_test.rviz"/>
+      </group>
 
-      <node pkg="rviz" type="rviz" name="rviz" required="true" args="-d $(find controller_tutorial)/rviz/controller_test.rviz"/>
    </group>
 </launch>
