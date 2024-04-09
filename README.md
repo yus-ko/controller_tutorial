@@ -4,10 +4,8 @@
  
 ```bash
 cd ~/catkin_ws/src
-git clone https://github.com/yus-ko/potbot
+git clone https://github.com/yus-ko/potbot_core
 git clone https://github.com/yus-ko/controller_tutorial
-cd potbot
-ls | grep -vE 'potbot_lib|potbot_msgs' | xargs rm -r
 ```
 ```bash
 cd ~/catkin_ws

@@ -1,0 +1,22 @@
+<launch>
+   <arg name="multi_robot"                      default="/robot_0"/>
+   <arg name="topic_cmd"                        default="cmd_vel"/>
+   <arg name="topic_joy"                        default="joy"/>
+   <arg name="max_linear_velocity"              default="0.5"/>
+   <arg name="max_angular_velocity"             default="1.0"/>
+
+   <group ns="$(arg multi_robot)">
+   
+      <node pkg="joy"  name="joy_node" type="joy_node" output="screen">
+         <remap from="$(arg multi_robot)/joy"   to="$(arg topic_joy)"/>
+      </node>
+
+      <node pkg="controller_tutorial"  name="controller_tutorial_joy_to_cmd" type="controller_tutorial_joy_to_cmd" output="screen">
+         <param name="topic_cmd"                value="$(arg topic_cmd)"/>
+         <param name="topic_joy"                value="$(arg topic_joy)"/>
+         <param name="max_linear_velocity"      value="$(arg max_linear_velocity)"/>
+         <param name="max_angular_velocity"     value="$(arg max_angular_velocity)"/>
+      </node>
+
+   </group>
+</launch>
