@@ -4,6 +4,7 @@
    <arg name="topic_joy"                        default="joy"/>
    <arg name="max_linear_velocity"              default="0.5"/>
    <arg name="max_angular_velocity"             default="1.0"/>
+   <arg name="game_pad_name"                    default="xbox_one_controller"/>
 
    <group ns="$(arg multi_robot)">
    
@@ -16,6 +17,7 @@
          <param name="topic_joy"                value="$(arg topic_joy)"/>
          <param name="max_linear_velocity"      value="$(arg max_linear_velocity)"/>
          <param name="max_angular_velocity"     value="$(arg max_angular_velocity)"/>
+         <param name="game_pad_name"            value="$(arg game_pad_name)"/>
       </node>
 
    </group>
