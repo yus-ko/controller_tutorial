@@ -75,7 +75,7 @@ int main(int argc,char **argv){
 
 	nav_msgs::Odometry robot_pose;
 	robot_pose.header.frame_id = "map";
-	robot_pose.pose.pose = potbot_lib::utility::get_Pose(0,0,0,0,0,0);	//ロボット初期位置 x y z r p y
+	robot_pose.pose.pose = potbot_lib::utility::get_Pose(0,2,0,0,0,-0.1);	//ロボット初期位置 x y z r p y
 
 	geometry_msgs::PoseArray particles_msg;
 	particles_msg.header.frame_id = robot_pose.header.frame_id;
@@ -103,7 +103,7 @@ int main(int argc,char **argv){
 	while (ros::ok())
 	{
 
-		g_robot[0].pid_control();
+		g_robot[0].time_state_control();
 		g_robot[0].update();
 		
 		g_robot[0].to_msg(robot_pose);
