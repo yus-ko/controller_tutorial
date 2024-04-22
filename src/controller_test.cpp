@@ -102,9 +102,9 @@ void ControllerTest::__odom_callback(const nav_msgs::Odometry& msg)
 		robot_.set_msg(msg);
 	}
 	
-	robot_.set_msg(msg);
-	// robot_.pid_control();
-	robot_.pure_pursuit();
+	// robot_.set_msg(msg);
+	// // robot_.pid_control();
+	// robot_.pure_pursuit();
 	
 
 	nav_msgs::Odometry robot_pose;
