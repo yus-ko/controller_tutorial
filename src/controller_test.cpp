@@ -17,7 +17,7 @@ private:
 	ros::Publisher pub_cmd_, pub_lookahead_, pub_path_;
 	ros::Subscriber sub_odom_, sub_goal_, sub_path_;
 	bool subscribed_goal_ = false;
-	std::string fullpath_to_pathcsv_;
+	std::string fullpath_to_pathcsv_, controller_name_ = "pid";
 	tf2_ros::TransformBroadcaster tf_broadcaster_;
 	tf2_ros::Buffer tf_buffer_;
 	geometry_msgs::PoseStamped goal_;
@@ -31,11 +31,11 @@ private:
 	void __broadcast_frame(tf2_ros::TransformBroadcaster& bc, std::string parent_frame_id, std::string child_frame_id, geometry_msgs::Pose pose);
 
 public:
-	ControllerTest(/* args */);
+	ControllerTest();
 	~ControllerTest(){};
 };
 
-ControllerTest::ControllerTest(/* args */)
+ControllerTest::ControllerTest()
 {
 	ros::NodeHandle n("~");
 
@@ -83,40 +83,43 @@ void ControllerTest::__broadcast_frame(tf2_ros::TransformBroadcaster& bc, std::s
 
 void ControllerTest::__odom_callback(const nav_msgs::Odometry& msg)
 {
+	if (!subscribed_goal_) return;
 
-	if (subscribed_goal_)
+	robot_.set_msg(msg);
+	
+	if (controller_name_ == "time_state")
 	{
 		__broadcast_frame(tf_broadcaster_, "map", "path_frame", goal_.pose);
 		nav_msgs::Odometry robot_from_odom = msg;
 		robot_from_odom.header.stamp = ros::Time(0);
 		geometry_msgs::PoseStamped robot_from_path = potbot_lib::utility::get_tf(tf_buffer_, robot_from_odom, "path_frame");
-		// potbot_lib::utility::print_Pose(robot_from_path);
+		potbot_lib::utility::print_Pose(robot_from_path);
 		robot_.set_msg(robot_from_path);
 		robot_.time_state_control();
-	}
-	else
-	{
-		robot_.set_target(	msg.pose.pose.position.x,
-							msg.pose.pose.position.y,
-							potbot_lib::utility::get_Yaw(msg.pose.pose.orientation));
-		robot_.set_msg(msg);
-	}
-	
-	robot_.set_msg(msg);
-	// robot_.pid_control();
-	robot_.pure_pursuit();
-	
 
+		if (robot_.get_current_line_following_process() == potbot_lib::Controller::PROCESS_STOP) subscribed_goal_ = false;
+	}
+	else if (controller_name_ == "pid")
+	{
+		robot_.pid_control();
+		if (robot_.get_current_process() == potbot_lib::Controller::PROCESS_STOP) subscribed_goal_ = false;
+	}
+	else if (controller_name_ == "pure_pursuit")
+	{
+		robot_.pure_pursuit();
+
+		visualization_msgs::Marker lookahead_msg;
+		robot_.get_lookahead(lookahead_msg);
+		lookahead_msg.header = msg.header;
+		pub_lookahead_.publish(lookahead_msg);
+
+		if (robot_.get_current_line_following_process() == potbot_lib::Controller::PROCESS_STOP) subscribed_goal_ = false;
+	}
+
+	
 	nav_msgs::Odometry robot_pose;
 	robot_.to_msg(robot_pose);
-
-	visualization_msgs::Marker lookahead_msg;
-	robot_.get_lookahead(lookahead_msg);
-	lookahead_msg.header = msg.header;
-
 	pub_cmd_.publish(robot_pose.twist.twist);
-	pub_lookahead_.publish(lookahead_msg);
-
 }
 
 void ControllerTest::__goal_callback(const geometry_msgs::PoseStamped& msg)
@@ -125,24 +128,26 @@ void ControllerTest::__goal_callback(const geometry_msgs::PoseStamped& msg)
 	subscribed_goal_ = true;
 	robot_.set_target(msg.pose);
 
-	nav_msgs::Path path_msg;
-	potbot_lib::PathPlanner::get_path_msg_from_csv(path_msg, fullpath_to_pathcsv_);
-	path_msg.header = msg.header;
-
-	double goalx = msg.pose.position.x;
-	double goaly = msg.pose.position.y;
-	double goalyaw = potbot_lib::utility::get_Yaw(msg.pose.orientation);
-	for (auto& p:path_msg.poses)
+	if (controller_name_ == "pure_pursuit")
 	{
-		double x = p.pose.position.x;
-		double y = p.pose.position.y;
-		geometry_msgs::Pose p_rotated;
-		p.pose.position.x = x*cos(goalyaw) - y*sin(goalyaw) + goalx;
-		p.pose.position.y = x*sin(goalyaw) + y*cos(goalyaw) + goaly;
-	}
-	
-	pub_path_.publish(path_msg);
+		nav_msgs::Path path_msg;
+		potbot_lib::PathPlanner::get_path_msg_from_csv(path_msg, fullpath_to_pathcsv_);
+		path_msg.header = msg.header;
 
+		double goalx = msg.pose.position.x;
+		double goaly = msg.pose.position.y;
+		double goalyaw = potbot_lib::utility::get_Yaw(msg.pose.orientation);
+		for (auto& p:path_msg.poses)
+		{
+			double x = p.pose.position.x;
+			double y = p.pose.position.y;
+			geometry_msgs::Pose p_rotated;
+			p.pose.position.x = x*cos(goalyaw) - y*sin(goalyaw) + goalx;
+			p.pose.position.y = x*sin(goalyaw) + y*cos(goalyaw) + goaly;
+		}
+		
+		pub_path_.publish(path_msg);
+	}
 }
 
 void ControllerTest::__path_callback(const nav_msgs::Path& msg)
@@ -168,6 +173,7 @@ void ControllerTest::__param_callback(const controller_tutorial::controller_test
 	robot_.set_distance_to_lookahead_point(param.distance_to_lookahead_point);
 
 	fullpath_to_pathcsv_ = param.path_csvfile;
+	controller_name_ = param.controller_name;
 }
 
 int main(int argc,char **argv){

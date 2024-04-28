@@ -115,6 +115,10 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
+        map:
+          Value: true
+        path_frame:
+          Value: true
         robot_0/base_footprint:
           Value: true
         robot_0/odom:
@@ -125,9 +129,12 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        robot_0/odom:
-          robot_0/base_footprint:
+        map:
+          path_frame:
             {}
+          robot_0/odom:
+            robot_0/base_footprint:
+              {}
       Update Interval: 0
       Value: true
     - Class: rviz/Marker
@@ -161,6 +168,13 @@ Visualization Manager:
       Shaft Length: 0.10000000149011612
       Topic: Path
       Unreliable: false
+      Value: true
+    - Class: rviz/Axes
+      Enabled: true
+      Length: 5
+      Name: PathFrame
+      Radius: 0.009999999776482582
+      Reference Frame: path_frame
       Value: true
   Enabled: true
   Global Options:
