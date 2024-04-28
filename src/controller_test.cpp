@@ -104,17 +104,9 @@ void ControllerTest::__odom_callback(const nav_msgs::Odometry& msg)
 		robot_.pid_control();
 		if (robot_.get_current_process() == potbot_lib::Controller::PROCESS_STOP) subscribed_goal_ = false;
 	}
-<<<<<<< HEAD
 	else if (controller_name_ == "pure_pursuit")
 	{
 		robot_.pure_pursuit();
-=======
-	
-	// robot_.set_msg(msg);
-	// // robot_.pid_control();
-	// robot_.pure_pursuit();
-	
->>>>>>> f4a8bd35d4e547a2c83790121866dad6015c1a2d
 
 		visualization_msgs::Marker lookahead_msg;
 		robot_.get_lookahead(lookahead_msg);
