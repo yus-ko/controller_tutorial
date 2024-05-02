@@ -95,7 +95,9 @@ void ControllerTest::__odom_callback(const nav_msgs::Odometry& msg)
 		geometry_msgs::PoseStamped robot_from_path = potbot_lib::utility::get_tf(tf_buffer_, robot_from_odom, "path_frame");
 		potbot_lib::utility::print_Pose(robot_from_path);
 		robot_.set_msg(robot_from_path);
-		robot_.time_state_control();
+
+		// robot_.time_state_control();
+		robot_.p166_41();
 
 		if (robot_.get_current_line_following_process() == potbot_lib::Controller::PROCESS_STOP) subscribed_goal_ = false;
 	}
