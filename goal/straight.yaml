@@ -1,0 +1,11 @@
+- "topic_name": "/robot_0/goal"
+  "frame_id": "map"
+  "x": 2.0
+  "y": 0.0
+  "yaw": -90.0
+
+- "topic_name": "/robot_1/goal"
+  "frame_id": "robot_1/odom"
+  "x": 2.0
+  "y": 0.0
+  "yaw": 90.0

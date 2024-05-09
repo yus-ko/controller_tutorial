@@ -5,65 +5,56 @@ import rospy
 from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import PoseStamped
 import tf.transformations as tf
+import math
 from std_msgs.msg import Empty
+import yaml
 
-def empty_callback(msg):
-    publish_pose()
+class PublishGoals:
+    def __init__(self):
+        rospy.init_node('publish_goals', anonymous=True)
+        
+        yaml_dir = rospy.get_param("~yaml_dir", "example.yaml")
+        # YAMLファイルの読み込み
+        with open(yaml_dir, 'r') as file:
+            self.goals = yaml.safe_load(file)
 
-def subscribe_to_empty_topic():
-    rospy.init_node('empty_subscriber', anonymous=True)
-    rospy.Subscriber('/robot_0/goal', PoseStamped, empty_callback)
-    rospy.spin()  # ノードが終了するまで実行を続ける
+            for goal in self.goals:
+                goal["publisher"] = rospy.Publisher(goal["topic_name"], PoseStamped, queue_size=10)
 
-def rpy_to_quaternion(roll, pitch, yaw):
-    # rpyからクオータニオンを作成
-    quaternion = tf.quaternion_from_euler(roll, pitch, yaw)
-    # geometry_msgs/Quaternion型に変換
-    quaternion_msg = Quaternion()
-    quaternion_msg.x = quaternion[0]
-    quaternion_msg.y = quaternion[1]
-    quaternion_msg.z = quaternion[2]
-    quaternion_msg.w = quaternion[3]
-    return quaternion_msg
+            rospy.Subscriber('/start', Empty, self.publish)
+            rospy.spin()  # ノードが終了するまで実行を続ける
+        
 
-def publish_pose():
-    pub1 = rospy.Publisher('/robot_1/goal', PoseStamped, queue_size=10)
-    pub2 = rospy.Publisher('/robot_2/goal', PoseStamped, queue_size=10)
-    pub3 = rospy.Publisher('/robot_3/goal', PoseStamped, queue_size=10)
+    def rpy_to_quaternion(self, roll, pitch, yaw):
+        # rpyからクオータニオンを作成
+        quaternion = tf.quaternion_from_euler(roll, pitch, yaw)
+        # geometry_msgs/Quaternion型に変換
+        quaternion_msg = Quaternion()
+        quaternion_msg.x = quaternion[0]
+        quaternion_msg.y = quaternion[1]
+        quaternion_msg.z = quaternion[2]
+        quaternion_msg.w = quaternion[3]
+        return quaternion_msg
 
-        # PoseStampedメッセージの作成
-    pose_msg1 = PoseStamped()
-    pose_msg1.header.stamp = rospy.Time.now()  # 現在の時間
-    pose_msg1.header.frame_id = "robot_1/odom"  # フレームID
-    pose_msg1.pose.position.x = 2.0  # x座標
-    pose_msg1.pose.position.y = 1.0  # y座標
-    pose_msg1.pose.position.z = 0.0  # z座標
-    pose_msg1.pose.orientation = rpy_to_quaternion(0,0,1.57)
+    def publish(self, msg):
+        
+        for goal in self.goals:
+            
+            # PoseStampedメッセージの作成
+            pose_msg = PoseStamped()
+            pose_msg.header.stamp = rospy.Time.now()  # 現在の時間
+            pose_msg.header.frame_id = goal["frame_id"]  # フレームID
+            pose_msg.pose.position.x = goal["x"]  # x座標
+            pose_msg.pose.position.y = goal["y"]  # y座標
+            pose_msg.pose.position.z = 0.0  # z座標
+            pose_msg.pose.orientation = self.rpy_to_quaternion(0,0,goal["yaw"]/180.0*math.pi)
+            goal["publisher"].publish(pose_msg)
 
-    pose_msg2 = PoseStamped()
-    pose_msg2.header.stamp = pose_msg1.header.stamp
-    pose_msg2.header.frame_id = "robot_2/odom"  # フレームID
-    pose_msg2.pose.position.x = 1.3  # x座標
-    pose_msg2.pose.position.y = 0.0  # y座標
-    pose_msg2.pose.position.z = 0.0  # z座標
-    pose_msg2.pose.orientation = rpy_to_quaternion(0,0,1.57)
-
-    pose_msg3 = PoseStamped()
-    pose_msg3.header.stamp = pose_msg1.header.stamp
-    pose_msg3.header.frame_id = "robot_3/odom"  # フレームID
-    pose_msg3.pose.position.x = 2.7  # x座標
-    pose_msg3.pose.position.y = 0.0  # y座標
-    pose_msg3.pose.position.z = 0.0  # z座標
-    pose_msg3.pose.orientation = rpy_to_quaternion(0,0,1.57)
-
-
-    # メッセージをパブリッシュ
-    pub1.publish(pose_msg1)
-    pub2.publish(pose_msg2)
-    pub3.publish(pose_msg3)
+            str = "%s :published" % goal["topic_name"]
+            rospy.loginfo(str)
 
 if __name__ == '__main__':
     try:
-        subscribe_to_empty_topic()
+        PublishGoals()
     except rospy.ROSInterruptException:
         pass

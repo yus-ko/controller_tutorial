@@ -1,0 +1,8 @@
+<launch>
+    <arg name="yaml_name"       default="example.yaml"/>
+    <arg name="yaml_dir"        default="$(find controller_tutorial)/goal/$(arg yaml_name)"/>
+
+    <node pkg="controller_tutorial" type="pub_goals.py" name="pub_goals" output="screen">
+        <param name="yaml_dir"  value="$(arg yaml_dir)"/>
+    </node>
+</launch>
