@@ -53,6 +53,29 @@ void joy_callback(const sensor_msgs::Joy& msg)
 		button_left_stick	= msg.buttons[9];
 		button_right_stick	= msg.buttons[10];
 	}
+	else if (g_game_pad_name == "dualshock4")
+	{
+		left_stick_x		= msg.axes[0];	//左 正方向 1~-1
+		left_stick_y		= msg.axes[1];	//上 正方向 1~-1
+		right_stick_x		= msg.axes[3];
+		right_stick_y		= msg.axes[4];
+		left_triger			= msg.axes[2];
+		right_triger		= msg.axes[5];
+		d_pad_x				= msg.axes[6];	//左 正方向 1~-1
+		d_pad_y				= msg.axes[7];	//上 正方向 1~-1
+
+		button_a			= msg.buttons[0];
+		button_b			= msg.buttons[1];
+		button_x			= msg.buttons[3];
+		button_y			= msg.buttons[2];
+		button_left			= msg.buttons[4];
+		button_right		= msg.buttons[5];
+		button_select		= msg.buttons[8];
+		button_start		= msg.buttons[9];
+		button_home			= msg.buttons[10];
+		button_left_stick	= msg.buttons[11];
+		button_right_stick	= msg.buttons[12];
+	}
 	else if (g_game_pad_name == "elecom_JC-U3912T")
 	{
 		left_stick_x		= msg.axes[0];	//左 正方向 1~-1
