@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include <potbot_lib/DiffDriveController.h>
+#include <potbot_lib/DWAController.h>
 #include <potbot_lib/PathPlanner.h>
 #include <dynamic_reconfigure/server.h>
 #include <controller_tutorial/controller_testConfig.h>
@@ -13,8 +13,8 @@
 class ControllerTest
 {
 private:
-	potbot_lib::Controller::DiffDriveController robot_;
-	ros::Publisher pub_cmd_, pub_lookahead_, pub_path_;
+	potbot_lib::Controller::DWAController robot_;
+	ros::Publisher pub_cmd_, pub_lookahead_, pub_path_, pub_path_marker_, pub_best_path_, pub_split_path_;
 	ros::Subscriber sub_odom_, sub_goal_, sub_path_;
 	bool subscribed_goal_ = false;
 	std::string fullpath_to_pathcsv_, controller_name_ = "pid";
@@ -39,23 +39,20 @@ ControllerTest::ControllerTest()
 {
 	ros::NodeHandle n("~");
 
-	std::string topic_cmd		= "cmd_vel";
-	std::string topic_odom		= "odom";
-	std::string topic_goal 		= "move_base_simple/goal";
-
 	n.getParam("path_csvfile",	fullpath_to_pathcsv_);
-	n.getParam("topic_cmd",		topic_cmd);
-	n.getParam("topic_odom",	topic_odom);
-	n.getParam("topic_goal",	topic_goal);
 
 	ros::NodeHandle nh;
 
-	pub_cmd_					= nh.advertise<geometry_msgs::Twist>(topic_cmd, 1);
+	pub_cmd_					= nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
 	pub_lookahead_				= nh.advertise<visualization_msgs::Marker>("LookAhead", 1);
-	pub_path_					= nh.advertise<nav_msgs::Path>("Path", 1);
-	sub_odom_					= nh.subscribe(topic_odom,1, &ControllerTest::__odom_callback, this);
-	sub_goal_					= nh.subscribe(topic_goal,1, &ControllerTest::__goal_callback, this);
-	sub_path_					= nh.subscribe("Path",1, &ControllerTest::__path_callback, this);
+	pub_path_					= nh.advertise<nav_msgs::Path>("Path/raw", 1);
+	pub_path_marker_ 			= nh.advertise<visualization_msgs::MarkerArray>("multi_path", 1);
+	pub_best_path_ 				= nh.advertise<nav_msgs::Path>("best_path", 1);
+	pub_split_path_ 			= nh.advertise<nav_msgs::Path>("Path/split", 1);
+
+	sub_odom_					= nh.subscribe("odom",1, &ControllerTest::__odom_callback, this);
+	sub_goal_					= nh.subscribe("goal",1, &ControllerTest::__goal_callback, this);
+	sub_path_					= nh.subscribe("Path/raw",1, &ControllerTest::__path_callback, this);
 
 	dynamic_reconfigure::Server<controller_tutorial::controller_testConfig>::CallbackType f;
 	f = boost::bind(&ControllerTest::__param_callback, this, _1, _2);
@@ -117,6 +114,21 @@ void ControllerTest::__odom_callback(const nav_msgs::Odometry& msg)
 
 		if (robot_.get_current_line_following_process() == potbot_lib::Controller::PROCESS_STOP) subscribed_goal_ = false;
 	}
+	else if (controller_name_ == "dwa")
+	{
+		robot_.calculate_command();
+
+		nav_msgs::Path path_msg;
+		robot_.get_best_path(path_msg);
+		pub_best_path_.publish(path_msg);
+
+		robot_.get_split_path(path_msg);
+		pub_split_path_.publish(path_msg);
+		
+		visualization_msgs::MarkerArray multi_path_msg;
+		robot_.get_plans(multi_path_msg);
+		pub_path_marker_.publish(multi_path_msg);
+	}
 
 	
 	nav_msgs::Odometry robot_pose;
@@ -130,7 +142,7 @@ void ControllerTest::__goal_callback(const geometry_msgs::PoseStamped& msg)
 	subscribed_goal_ = true;
 	robot_.set_target(msg.pose);
 
-	if (controller_name_ == "pure_pursuit")
+	if (controller_name_ == "pure_pursuit" || controller_name_ == "dwa")
 	{
 		nav_msgs::Path path_msg;
 		potbot_lib::PathPlanner::get_path_msg_from_csv(path_msg, fullpath_to_pathcsv_);
@@ -155,6 +167,7 @@ void ControllerTest::__goal_callback(const geometry_msgs::PoseStamped& msg)
 void ControllerTest::__path_callback(const nav_msgs::Path& msg)
 {
 	robot_.set_target_path(msg);
+	robot_.set_dwa_target_path(msg);
 }
 
 void ControllerTest::__param_callback(const controller_tutorial::controller_testConfig& param, uint32_t level)
@@ -176,6 +189,14 @@ void ControllerTest::__param_callback(const controller_tutorial::controller_test
 
 	fullpath_to_pathcsv_ = param.path_csvfile;
 	controller_name_ = param.controller_name;
+
+	robot_.set_time_increment(param.dwa_time_increment);
+	robot_.set_linear_velocity_min(param.min_linear_velocity);
+	robot_.set_linear_velocity_max(param.max_linear_velocity);
+	robot_.set_linear_velocity_increment(param.dwa_linear_velocity_increment);
+	robot_.set_angular_velocity_min(param.min_angular_velocity);
+	robot_.set_angular_velocity_max(param.max_angular_velocity);
+	robot_.set_angular_velocity_increment(param.dwa_angular_velocity_increment);
 }
 
 int main(int argc,char **argv){
