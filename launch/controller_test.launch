@@ -26,8 +26,8 @@
          <param name="gain_d"                                  value="0.001"/>
          <param name="stop_margin_angle"                       value="0.02"/>
          <param name="stop_margin_distance"                    value="0.05"/>
-         <param name="max_linear_velocity"                     value="0.3"/>
-         <param name="max_angular_velocity"                    value="0.3"/>
+         <param name="max_linear_velocity"                     value="0.5"/>
+         <param name="max_angular_velocity"                    value="1.0"/>
       </node>
       
       <group if="$(arg use_rviz)">
