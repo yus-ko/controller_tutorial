@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <tf2/utils.h>
 #include <potbot_lib/DiffDriveController.h>
 #include <potbot_msgs/ObstacleArray.h>
 #include <dynamic_reconfigure/server.h>
@@ -42,26 +43,35 @@ int main(int argc,char **argv){
 	ros::NodeHandle n("~");
 
 	double control_frequency = 50.0;
-	int particle_num = 100;
+	double norm_noise_mean_x = 0;
+	double norm_noise_variance_x = 0.0001;
+	double norm_noise_mean_y = 0;
+	double norm_noise_variance_y = 0.0001;
+	double norm_noise_mean_yaw = 0;
+	double norm_noise_variance_yaw = 0.0001;
 	double norm_noise_mean_linear_velocity = 0;
-	double norm_noise_variance_linear_velocity = 0.1;
+	double norm_noise_variance_linear_velocity = 0.0001;
 	double norm_noise_mean_angular_velocity = 0;
-	double norm_noise_variance_angular_velocity = 0.1;
+	double norm_noise_variance_angular_velocity = 0.0001;
 	
 	n.getParam("control_frequency", control_frequency);
-	n.getParam("particle_num", particle_num);
+	n.getParam("norm_noise_mean_x", norm_noise_mean_x);
+	n.getParam("norm_noise_variance_x", norm_noise_variance_x);
+	n.getParam("norm_noise_mean_y", norm_noise_mean_y);
+	n.getParam("norm_noise_variance_y", norm_noise_variance_y);
+	n.getParam("norm_noise_mean_yaw", norm_noise_mean_yaw);
+	n.getParam("norm_noise_variance_yaw", norm_noise_variance_yaw);
 	n.getParam("norm_noise_mean_linear_velocity", norm_noise_mean_linear_velocity);
 	n.getParam("norm_noise_variance_linear_velocity", norm_noise_variance_linear_velocity);
 	n.getParam("norm_noise_mean_angular_velocity", norm_noise_mean_angular_velocity);
 	n.getParam("norm_noise_variance_angular_velocity", norm_noise_variance_angular_velocity);
 
-	g_robot.resize(particle_num+1);
+	g_robot.resize(1);
 
 	ros::NodeHandle nh;
 
 	ros::Publisher pub_odom					= nh.advertise<nav_msgs::Odometry>("odom", 1);
-	ros::Publisher pub_particles			= nh.advertise<geometry_msgs::PoseArray>("particles", 1);
-	ros::Publisher pub_particles_state		= nh.advertise<potbot_msgs::ObstacleArray>("particles_state", 1);
+	ros::Publisher pub_odom_truth			= nh.advertise<nav_msgs::Odometry>("odom/truth", 1);
 
 	ros::Subscriber sub_inipose				= nh.subscribe("initialpose",1,inipose_callback);
 	ros::Subscriber sub_goal				= nh.subscribe("move_base_simple/goal",1,goal_callback);
@@ -77,18 +87,6 @@ int main(int argc,char **argv){
 	robot_pose.header.frame_id = "map";
 	robot_pose.pose.pose = potbot_lib::utility::get_Pose(0,0,0,0,0,0);	//ロボット初期位置 x y z r p y
 
-	geometry_msgs::PoseArray particles_msg;
-	particles_msg.header.frame_id = robot_pose.header.frame_id;
-	potbot_msgs::ObstacleArray particle_state_msg;
-	particle_state_msg.header.frame_id = robot_pose.header.frame_id;
-	for (size_t i = 0; i < particle_num; i++) 
-	{
-		particles_msg.poses.push_back(robot_pose.pose.pose);
-		potbot_msgs::Obstacle p;
-		p.pose = robot_pose.pose.pose;
-		particle_state_msg.data.push_back(p);
-	};
-
 	for (auto& robo : g_robot)
 	{
 		robo.deltatime = 1.0/control_frequency;;
@@ -97,44 +95,30 @@ int main(int argc,char **argv){
 
 	std::random_device rd;
     std::default_random_engine generator(rd());
+	std::normal_distribution<double> distribution_x(norm_noise_mean_x, sqrt(norm_noise_variance_x));
+	std::normal_distribution<double> distribution_y(norm_noise_mean_y, sqrt(norm_noise_variance_y));
+	std::normal_distribution<double> distribution_yaw(norm_noise_mean_yaw, sqrt(norm_noise_variance_yaw));
     std::normal_distribution<double> distribution_linear_velocity(norm_noise_mean_linear_velocity, sqrt(norm_noise_variance_linear_velocity));
 	std::normal_distribution<double> distribution_angular_velocity(norm_noise_mean_angular_velocity, sqrt(norm_noise_variance_angular_velocity));
 
 	while (ros::ok())
 	{
 
-		g_robot[0].time_state_control();
+		g_robot[0].pid_control();
 		g_robot[0].update();
 		
 		g_robot[0].to_msg(robot_pose);
 
-		particles_msg.header = robot_pose.header;
-		particle_state_msg.header = robot_pose.header;
-		double v_truth = robot_pose.twist.twist.linear.x;
-		double omega_truth = robot_pose.twist.twist.angular.z;
-		if (v_truth != 0 || omega_truth != 0)
-		{
-			for (size_t i = 1; i < particle_num+1; i++)
-			{
-				double v_noise = v_truth + distribution_linear_velocity(generator);
-				double omega_noise = omega_truth + distribution_angular_velocity(generator);
-				nav_msgs::Odometry particle;
-				g_robot[i].to_msg(particle);
-				particle.twist.twist.linear.x = v_noise;
-				particle.twist.twist.angular.z = omega_noise;
-				g_robot[i].set_msg(particle);
-				g_robot[i].update();
-				particles_msg.poses[i-1] = particle.pose.pose;
-
-				particle_state_msg.data[i-1].pose = particle.pose.pose;
-				particle_state_msg.data[i-1].twist = particle.twist.twist;
-
-			}
-		}
+		pub_odom_truth.publish(robot_pose);
+		
+		robot_pose.pose.pose.position.x += distribution_x(generator);
+		robot_pose.pose.pose.position.y += distribution_y(generator);
+		double yaw = tf2::getYaw(robot_pose.pose.pose.orientation);
+		robot_pose.pose.pose.orientation = potbot_lib::utility::get_Quat(0,0,yaw+distribution_yaw(generator));
+		robot_pose.twist.twist.linear.x += distribution_linear_velocity(generator);
+		robot_pose.twist.twist.angular.z += distribution_angular_velocity(generator);
 
 		pub_odom.publish(robot_pose);
-		pub_particles.publish(particles_msg);
-		pub_particles_state.publish(particle_state_msg);
         
 		ros::spinOnce();
 		rate.sleep();
