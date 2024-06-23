@@ -1,6 +1,6 @@
 #include <ros/ros.h>
-#include <potbot_lib/DWAController.h>
-#include <potbot_lib/PathPlanner.h>
+#include <potbot_lib/dwa_controller_ros.h>
+#include <potbot_lib/apf_path_planner_ros.h>
 #include <dynamic_reconfigure/server.h>
 #include <controller_tutorial/controller_testConfig.h>
 #include <geometry_msgs/PoseArray.h>
@@ -13,7 +13,7 @@
 class ControllerTest
 {
 private:
-	potbot_lib::Controller::DWAController robot_;
+	potbot_lib::controller::DWAControllerROS robot_;
 	ros::Publisher pub_cmd_, pub_lookahead_, pub_path_, pub_path_marker_, pub_best_path_, pub_split_path_;
 	ros::Subscriber sub_odom_, sub_goal_, sub_path_;
 	bool subscribed_goal_ = false;
@@ -82,7 +82,7 @@ void ControllerTest::__odom_callback(const nav_msgs::Odometry& msg)
 {
 	if (!subscribed_goal_) return;
 
-	robot_.set_msg(msg);
+	robot_.setMsg(msg);
 	
 	if (controller_name_ == "time_state")
 	{
@@ -91,48 +91,49 @@ void ControllerTest::__odom_callback(const nav_msgs::Odometry& msg)
 		robot_from_odom.header.stamp = ros::Time(0);
 		geometry_msgs::PoseStamped robot_from_path = potbot_lib::utility::get_tf(tf_buffer_, robot_from_odom, "path_frame");
 		potbot_lib::utility::print_Pose(robot_from_path);
-		robot_.set_msg(robot_from_path);
+		robot_.setMsg(robot_from_path);
 
 		// robot_.time_state_control();
 		robot_.p166_41();
 
-		if (robot_.get_current_line_following_process() == potbot_lib::Controller::PROCESS_STOP) subscribed_goal_ = false;
+		if (robot_.getCurrentLineFollowingProcess() == potbot_lib::controller::PROCESS_STOP) subscribed_goal_ = false;
 	}
 	else if (controller_name_ == "pid")
 	{
-		robot_.pid_control();
-		if (robot_.get_current_process() == potbot_lib::Controller::PROCESS_STOP) subscribed_goal_ = false;
+		robot_.pidControl();
+		if (robot_.getCurrentProcess() == potbot_lib::controller::PROCESS_STOP) subscribed_goal_ = false;
 	}
 	else if (controller_name_ == "pure_pursuit")
 	{
-		robot_.pure_pursuit();
+		robot_.setInitializePose(false);
+		robot_.purePursuit();
 
-		visualization_msgs::Marker lookahead_msg;
-		robot_.get_lookahead(lookahead_msg);
-		lookahead_msg.header = msg.header;
-		pub_lookahead_.publish(lookahead_msg);
+		// visualization_msgs::Marker lookahead_msg;
+		// robot_.get_lookahead(lookahead_msg);
+		// lookahead_msg.header = msg.header;
+		// pub_lookahead_.publish(lookahead_msg);
 
-		if (robot_.get_current_line_following_process() == potbot_lib::Controller::PROCESS_STOP) subscribed_goal_ = false;
+		if (robot_.getCurrentLineFollowingProcess() == potbot_lib::controller::PROCESS_STOP) subscribed_goal_ = false;
 	}
 	else if (controller_name_ == "dwa")
 	{
-		robot_.calculate_command();
+		robot_.calculateCommand();
 
 		nav_msgs::Path path_msg;
-		robot_.get_best_path(path_msg);
+		robot_.getBestPath(path_msg);
 		pub_best_path_.publish(path_msg);
 
-		robot_.get_split_path(path_msg);
+		robot_.getSplitPath(path_msg);
 		pub_split_path_.publish(path_msg);
 		
 		visualization_msgs::MarkerArray multi_path_msg;
-		robot_.get_plans(multi_path_msg);
+		robot_.getPlans(multi_path_msg);
 		pub_path_marker_.publish(multi_path_msg);
 	}
 
 	
 	nav_msgs::Odometry robot_pose;
-	robot_.to_msg(robot_pose);
+	robot_.toMsg(robot_pose);
 	pub_cmd_.publish(robot_pose.twist.twist);
 }
 
@@ -140,12 +141,12 @@ void ControllerTest::__goal_callback(const geometry_msgs::PoseStamped& msg)
 {
 	goal_ = msg;
 	subscribed_goal_ = true;
-	robot_.set_target(msg.pose);
+	robot_.setTarget(msg.pose.position.x, msg.pose.position.y, tf2::getYaw(msg.pose.orientation));
 
 	if (controller_name_ == "pure_pursuit" || controller_name_ == "dwa")
 	{
 		nav_msgs::Path path_msg;
-		potbot_lib::PathPlanner::get_path_msg_from_csv(path_msg, fullpath_to_pathcsv_);
+		potbot_lib::path_planner::getPathMsgFromCsv(path_msg, fullpath_to_pathcsv_);
 		path_msg.header = msg.header;
 
 		double goalx = msg.pose.position.x;
@@ -166,37 +167,47 @@ void ControllerTest::__goal_callback(const geometry_msgs::PoseStamped& msg)
 
 void ControllerTest::__path_callback(const nav_msgs::Path& msg)
 {
-	robot_.set_target_path(msg);
-	robot_.set_dwa_target_path(msg);
+	std::vector<potbot_lib::Pose> path;
+	for (const auto&  p:msg.poses)
+	{
+		potbot_lib::Pose pose;
+		pose.position.x = p.pose.position.x;
+		pose.position.y = p.pose.position.y;
+		pose.rotation.z = tf2::getYaw(p.pose.orientation);
+		path.push_back(pose);
+	}
+	
+	robot_.setTargetPath(path);
+	robot_.setDwaTargetPath(msg);
 }
 
 void ControllerTest::__param_callback(const controller_tutorial::controller_testConfig& param, uint32_t level)
 {
-	robot_.set_gain(	param.gain_p,
+	robot_.setGain(		param.gain_p,
 						param.gain_i,
 						param.gain_d);
 
-	robot_.set_time_state_gain(	param.time_state_gain_k1,
+	robot_.setTimeStateGain(	param.time_state_gain_k1,
 								param.time_state_gain_k1);
 
-	robot_.set_margin(	param.stop_margin_angle,
+	robot_.setMargin(	param.stop_margin_angle,
 						param.stop_margin_distance);
 
-	robot_.set_limit(	param.max_linear_velocity,
+	robot_.setLimit(	param.max_linear_velocity,
 						param.max_angular_velocity);
 	
-	robot_.set_distance_to_lookahead_point(param.distance_to_lookahead_point);
+	robot_.setDistanceToLookaheadPoint(param.distance_to_lookahead_point);
 
 	fullpath_to_pathcsv_ = param.path_csvfile;
 	controller_name_ = param.controller_name;
 
-	robot_.set_time_increment(param.dwa_time_increment);
-	robot_.set_linear_velocity_min(param.min_linear_velocity);
-	robot_.set_linear_velocity_max(param.max_linear_velocity);
-	robot_.set_linear_velocity_increment(param.dwa_linear_velocity_increment);
-	robot_.set_angular_velocity_min(param.min_angular_velocity);
-	robot_.set_angular_velocity_max(param.max_angular_velocity);
-	robot_.set_angular_velocity_increment(param.dwa_angular_velocity_increment);
+	robot_.setTimeIncrement(param.dwa_time_increment);
+	robot_.setLinearVelocityMin(param.min_linear_velocity);
+	robot_.setLinearVelocityMax(param.max_linear_velocity);
+	robot_.setLinearVelocityIncrement(param.dwa_linear_velocity_increment);
+	robot_.setAngularVelocityMin(param.min_angular_velocity);
+	robot_.setAngularVelocityMax(param.max_angular_velocity);
+	robot_.setAngularVelocityIncrement(param.dwa_angular_velocity_increment);
 }
 
 int main(int argc,char **argv){

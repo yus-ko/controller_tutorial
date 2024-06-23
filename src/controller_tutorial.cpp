@@ -1,39 +1,39 @@
 #include <ros/ros.h>
 #include <tf2/utils.h>
-#include <potbot_lib/DiffDriveController.h>
+#include <potbot_lib/diff_drive_controller.h>
 #include <potbot_msgs/ObstacleArray.h>
 #include <dynamic_reconfigure/server.h>
 #include <controller_tutorial/controller_tutorialConfig.h>
 #include <geometry_msgs/PoseArray.h>
 #include <random>
 
-std::vector<potbot_lib::Controller::DiffDriveController> g_robot;
+std::vector<potbot_lib::controller::DiffDriveController> g_robot;
 
 void inipose_callback(const geometry_msgs::PoseWithCovarianceStamped& msg)
 {
 	nav_msgs::Odometry ini_pose;
 	ini_pose.header.frame_id = "map" ;
 	ini_pose.pose = msg.pose;
-	for (auto& robo : g_robot) robo.set_msg(ini_pose);
+	for (auto& robo : g_robot) robo.setMsg(ini_pose);
 }
 
 void goal_callback(const geometry_msgs::PoseStamped& msg)
 {
-	g_robot[0].set_target(	msg.pose.position.x,
+	g_robot[0].setTarget(	msg.pose.position.x,
 							msg.pose.position.y,
 							potbot_lib::utility::get_Yaw(msg.pose.orientation));
 }
 
 void param_callback(const controller_tutorial::controller_tutorialConfig& param, uint32_t level)
 {
-	g_robot[0].set_gain(	param.gain_p,
+	g_robot[0].setGain(		param.gain_p,
 							param.gain_i,
 							param.gain_d);
 
-	g_robot[0].set_margin(	param.stop_margin_angle,
+	g_robot[0].setMargin(	param.stop_margin_angle,
 							param.stop_margin_distance);
 
-	g_robot[0].set_limit(	param.max_linear_velocity,
+	g_robot[0].setLimit(	param.max_linear_velocity,
 							param.max_angular_velocity);
 }
 
@@ -90,7 +90,7 @@ int main(int argc,char **argv){
 	for (auto& robo : g_robot)
 	{
 		robo.deltatime = 1.0/control_frequency;;
-		robo.set_msg(robot_pose);
+		robo.setMsg(robot_pose);
 	}
 
 	std::random_device rd;
@@ -104,10 +104,10 @@ int main(int argc,char **argv){
 	while (ros::ok())
 	{
 
-		g_robot[0].pid_control();
+		g_robot[0].pidControl();
 		g_robot[0].update();
 		
-		g_robot[0].to_msg(robot_pose);
+		g_robot[0].toMsg(robot_pose);
 
 		pub_odom_truth.publish(robot_pose);
 		
