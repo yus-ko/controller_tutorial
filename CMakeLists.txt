@@ -5,6 +5,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   potbot_lib
   potbot_msgs
+  interactive_markers
 )
 
 generate_dynamic_reconfigure_options(
@@ -30,5 +31,8 @@ target_link_libraries(${PROJECT_NAME}_test ${catkin_LIBRARIES})
 
 add_executable(${PROJECT_NAME}_joy_to_cmd src/joy_to_cmd.cpp)
 target_link_libraries(${PROJECT_NAME}_joy_to_cmd ${catkin_LIBRARIES})
+
+add_executable(follow_marker src/follow_marker.cpp)
+target_link_libraries(follow_marker ${catkin_LIBRARIES})
 
 add_definitions(-std=c++14)

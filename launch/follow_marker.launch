@@ -1,0 +1,17 @@
+<launch>
+   <arg name="multi_robot"             default="/robot_0"/>
+   <arg name="path_csvfile"            default="$(find controller_tutorial)/path/sin.csv"/>
+   <arg name="use_rviz"                default="true"/>
+   <arg name="frame_id_global"         default="map"/>
+   <arg name="frame_id_odom"           default="$(arg multi_robot)/odom"/>
+   <arg name="topic_cmd"               default="cmd_vel"/>
+   <arg name="topic_odom"              default="odom"/>
+   <arg name="topic_goal"              default="goal"/>
+
+   <group ns="$(arg multi_robot)">
+      <node pkg="tf" type="static_transform_publisher" name="map_tf" args="0 0 0 0 0 0 $(arg frame_id_global) $(arg frame_id_odom) 60" />
+
+      <node pkg="controller_tutorial"  name="follow_marker" type="follow_marker" output="screen">
+      </node>
+   </group>
+</launch>
