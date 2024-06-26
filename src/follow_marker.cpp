@@ -17,6 +17,20 @@ public:
 FollowMarker::FollowMarker(potbot_lib::InteractiveMarkerManager *imm)
 {
 	ims_ = imm;
+
+	visualization_msgs::Marker marker_target;
+	marker_target.type = visualization_msgs::Marker::SPHERE;
+	marker_target.scale.x = 0.05;
+	marker_target.scale.y = 0.05;
+	marker_target.scale.z = 0.05;
+	marker_target.color.r = 0.7;
+	marker_target.color.g = 0.0;
+	marker_target.color.b = 0.0;
+	marker_target.color.a = 1.0;
+	marker_target.pose = potbot_lib::utility::get_Pose();
+	ims_->initInteractiveMarkers(marker_target);
+	ims_->initInteractiveMarkerServer();
+
 	// ros::NodeHandle n("~");
 
 	ros::NodeHandle nh;
