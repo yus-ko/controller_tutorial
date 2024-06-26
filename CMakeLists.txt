@@ -5,7 +5,6 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   potbot_lib
   potbot_msgs
-  interactive_markers
 )
 
 generate_dynamic_reconfigure_options(

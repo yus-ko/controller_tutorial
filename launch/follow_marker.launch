@@ -12,6 +12,9 @@
       <node pkg="tf" type="static_transform_publisher" name="map_tf" args="0 0 0 0 0 0 $(arg frame_id_global) $(arg frame_id_odom) 60" />
 
       <node pkg="controller_tutorial"  name="follow_marker" type="follow_marker" output="screen">
+         <param name="target/marker_num" value="1"/>
       </node>
+
+      <node pkg="rviz" type="rviz" name="rviz" required="true" args="-d $(find controller_tutorial)/rviz/follow_marker.rviz"/>
    </group>
 </launch>
