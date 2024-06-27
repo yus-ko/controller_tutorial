@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(controller_tutorial)
 
 find_package(catkin REQUIRED COMPONENTS
+  pluginlib
   pcl_ros
   potbot_lib
   potbot_msgs

@@ -12,7 +12,12 @@
       <node pkg="tf" type="static_transform_publisher" name="map_tf" args="0 0 0 0 0 0 $(arg frame_id_global) $(arg frame_id_odom) 60" />
 
       <node pkg="controller_tutorial"  name="follow_marker" type="follow_marker" output="screen">
+         <!-- <param name="controller_name" value="potbot_lib/PurePursuit"/> -->
+         <param name="controller_name" value="potbot_lib/DWA"/>
          <param name="target/marker_num" value="1"/>
+         <param name="controller/reset_path_index" value="false"/>
+         <param name="controller/max_linear_velocity" value="0.3"/>
+         <param name="controller/max_angular_velocity" value="1.5"/>
       </node>
 
       <node pkg="rviz" type="rviz" name="rviz" required="true" args="-d $(find controller_tutorial)/rviz/follow_marker.rviz"/>
