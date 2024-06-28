@@ -106,7 +106,7 @@ void ControllerTest::__odom_callback(const nav_msgs::Odometry& msg)
 	else if (controller_name_ == "pure_pursuit")
 	{
 		robot_.setInitializePose(false);
-		robot_.purePursuit();
+		// robot_.purePursuit();
 
 		// visualization_msgs::Marker lookahead_msg;
 		// robot_.get_lookahead(lookahead_msg);

@@ -58,8 +58,22 @@ FollowMarker::FollowMarker(potbot_lib::InteractiveMarkerManager* imm)
 
 void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
 {
-	const geometry_msgs::Point target = ims_->getMarker()->front().pose.position;
-	ddr_->setTargetPath(ims_->getMarkerTrajectories()->front());
+	const geometry_msgs::Pose target = ims_->getMarker()->front().pose;
+	const auto target_path = ims_->getMarkerTrajectories()->begin();
+	ddr_->setTargetPose(target);
+
+	// if (target_path->size() > 0)
+	// {
+	// 	double x = target_path->end()->pose.position.x;
+	// 	double y = target_path->end()->pose.position.y;
+	// 	double xp = (target_path->end()-1)->pose.position.x;
+	// 	double yp = (target_path->end()-1)->pose.position.y;
+	// 	double yaw = atan2(y-yp,x-xp);
+	// 	ddr_->setTargetPose(potbot_lib::utility::get_Pose(x,y,0,0,0,yaw));
+	// }
+	
+	
+	ddr_->setTargetPath(*target_path);
 	ddr_->setRobot(msg);
 	geometry_msgs::Twist cmd;
 	ddr_->calculateCommand(cmd);
