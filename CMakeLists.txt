@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
 generate_dynamic_reconfigure_options(
   cfg/controller_tutorial.cfg
   cfg/controller_test.cfg
+  cfg/FollowMarker.cfg
 )
 
 catkin_package(

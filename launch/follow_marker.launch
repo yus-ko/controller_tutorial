@@ -1,25 +1,50 @@
 <launch>
-   <arg name="multi_robot"             default="/robot_0"/>
-   <arg name="path_csvfile"            default="$(find controller_tutorial)/path/sin.csv"/>
+   <arg name="multi_robot"             default="robot_0"/>
+   <arg name="path_csvfile"            default="$(find controller_tutorial)/path/circle.csv"/>
    <arg name="use_rviz"                default="true"/>
+   <arg name="use_remote"              default="false"/>
+   <arg name="use_map"                 default="false"/>
    <arg name="frame_id_global"         default="map"/>
    <arg name="frame_id_odom"           default="$(arg multi_robot)/odom"/>
    <arg name="topic_cmd"               default="cmd_vel"/>
    <arg name="topic_odom"              default="odom"/>
    <arg name="topic_goal"              default="goal"/>
+   <arg name="model"                   default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+   <arg name="file_urdf"               default="$(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro"/>
+   <arg name="file_map"                default="$(find potbot_description)/maps/garage.yaml"/>
 
    <group ns="$(arg multi_robot)">
+
+      <group if="$(arg use_remote)">
+         <include file="$(find potbot)/launch/env/remote.launch">
+            <arg name="urdf_file"               value="$(find xacro)/xacro --inorder '$(arg file_urdf)'"/>
+            <arg name="multi_robot_name"        value="$(arg multi_robot)"/>
+         </include>
+      </group>
+
       <node pkg="tf" type="static_transform_publisher" name="map_tf" args="0 0 0 0 0 0 $(arg frame_id_global) $(arg frame_id_odom) 60" />
 
       <node pkg="controller_tutorial"  name="follow_marker" type="follow_marker" output="screen">
          <!-- <param name="controller_name" value="potbot_lib/PurePursuit"/> -->
          <param name="controller_name" value="potbot_lib/DWA"/>
-         <param name="target/marker_num" value="1"/>
-         <param name="controller/reset_path_index" value="false"/>
+
+         <param name="path_csvfile"    value="$(arg path_csvfile)"/>
+         
+         <rosparam file="$(find controller_tutorial)/config/target_markers.yaml"  command="load" ns="target" />
+         <!-- <param name="target/target_marker/trajectory_recording"    value="true"/> -->
+
          <param name="controller/max_linear_velocity" value="0.3"/>
+         <param name="controller/min_linear_velocity" value="-0.3"/>
          <param name="controller/max_angular_velocity" value="1.5"/>
+         <param name="controller/min_angular_velocity" value="-1.5"/>
       </node>
 
-      <node pkg="rviz" type="rviz" name="rviz" required="true" args="-d $(find controller_tutorial)/rviz/follow_marker.rviz"/>
+      <group if="$(arg use_map)">
+         <node pkg="map_server" type="map_server" name="map_server" args="$(arg file_map)"/>
+      </group>
+      
+      <group if="$(arg use_rviz)">
+         <node pkg="rviz" type="rviz" name="rviz" required="true" args="-d $(find controller_tutorial)/rviz/follow_marker.rviz"/>
+      </group>
    </group>
 </launch>
