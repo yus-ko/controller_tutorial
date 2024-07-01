@@ -73,35 +73,38 @@ void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
 	{
 		if (target_path->empty())
 		{
-			nav_msgs::Path path_msg;
-			path_msg.header = msg.header;
-			path_msg.poses = path_from_csv_;
-
-			double sx = target.position.x;
-			double sy = target.position.y;
-			double syaw = potbot_lib::utility::get_Yaw(target.orientation);
-			for (auto& p:path_msg.poses)
+			if (!path_from_csv_.empty())
 			{
-				double x = p.pose.position.x;
-				double y = p.pose.position.y;
-				geometry_msgs::Pose p_rotated;
-				p.pose.position.x = x*cos(syaw) - y*sin(syaw) + sx;
-				p.pose.position.y = x*sin(syaw) + y*cos(syaw) + sy;
-			}
+				nav_msgs::Path path_msg;
+				path_msg.header = msg.header;
+				path_msg.poses = path_from_csv_;
 
-			if (repeat_mode_ == "reverse" && ddr_->reachedTarget())
-			{
-				if (following_reverse_)
+				double sx = target.position.x;
+				double sy = target.position.y;
+				double syaw = potbot_lib::utility::get_Yaw(target.orientation);
+				for (auto& p:path_msg.poses)
 				{
-					std::reverse(path_msg.poses.begin(), path_msg.poses.end());
+					double x = p.pose.position.x;
+					double y = p.pose.position.y;
+					geometry_msgs::Pose p_rotated;
+					p.pose.position.x = x*cos(syaw) - y*sin(syaw) + sx;
+					p.pose.position.y = x*sin(syaw) + y*cos(syaw) + sy;
 				}
-				following_reverse_ = !following_reverse_;
+
+				if (repeat_mode_ == "reverse" && ddr_->reachedTarget())
+				{
+					if (following_reverse_)
+					{
+						std::reverse(path_msg.poses.begin(), path_msg.poses.end());
+					}
+					following_reverse_ = !following_reverse_;
+				}
+
+				pub_path_.publish(path_msg);
+
+				ddr_->setTargetPose(path_msg.poses.back().pose);
+				ddr_->setTargetPath(path_msg.poses);
 			}
-
-			pub_path_.publish(path_msg);
-
-			ddr_->setTargetPose(path_msg.poses.back().pose);
-			ddr_->setTargetPath(path_msg.poses);
 		}
 		else
 		{

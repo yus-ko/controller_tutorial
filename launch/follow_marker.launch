@@ -1,6 +1,7 @@
 <launch>
    <arg name="multi_robot"             default="robot_0"/>
    <arg name="path_csvfile"            default="$(find controller_tutorial)/path/circle.csv"/>
+   <arg name="repeat_mode"             default="none"/>
    <arg name="use_rviz"                default="true"/>
    <arg name="use_remote"              default="false"/>
    <arg name="use_map"                 default="false"/>
@@ -12,6 +13,11 @@
    <arg name="model"                   default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
    <arg name="file_urdf"               default="$(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro"/>
    <arg name="file_map"                default="$(find potbot_description)/maps/garage.yaml"/>
+   <arg name="file_marker"             default="$(find controller_tutorial)/config/target_markers.yaml"/>
+   <arg name="max_linear_velocity"     default="0.3"/>
+   <arg name="min_linear_velocity"     default="-0.3"/>
+   <arg name="max_angular_velocity"    default="1.5"/>
+   <arg name="min_angular_velocity"    default="-1.5"/>
 
    <group ns="$(arg multi_robot)">
 
@@ -29,14 +35,15 @@
          <param name="controller_name" value="potbot_lib/DWA"/>
 
          <param name="path_csvfile"    value="$(arg path_csvfile)"/>
+         <param name="repeat_mode"     value="$(arg repeat_mode)"/>
          
-         <rosparam file="$(find controller_tutorial)/config/target_markers.yaml"  command="load" ns="target" />
+         <rosparam file="$(arg file_marker)"  command="load" ns="target" />
          <!-- <param name="target/target_marker/trajectory_recording"    value="true"/> -->
 
-         <param name="controller/max_linear_velocity" value="0.3"/>
-         <param name="controller/min_linear_velocity" value="-0.3"/>
-         <param name="controller/max_angular_velocity" value="1.5"/>
-         <param name="controller/min_angular_velocity" value="-1.5"/>
+         <param name="controller/max_linear_velocity" value="$(arg max_linear_velocity)"/>
+         <param name="controller/min_linear_velocity" value="$(arg min_linear_velocity)"/>
+         <param name="controller/max_angular_velocity" value="$(arg max_angular_velocity)"/>
+         <param name="controller/min_angular_velocity" value="$(arg min_angular_velocity)"/>
       </node>
 
       <group if="$(arg use_map)">
