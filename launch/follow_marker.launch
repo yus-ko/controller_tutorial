@@ -1,6 +1,6 @@
 <launch>
    <arg name="multi_robot"             default="robot_0"/>
-   <arg name="path_csvfile"            default="$(find controller_tutorial)/path/circle.csv"/>
+   <arg name="path_csvfile"            default="$(find controller_tutorial)/path/sin.csv"/>
    <arg name="repeat_mode"             default="none"/>
    <arg name="use_rviz"                default="true"/>
    <arg name="use_remote"              default="false"/>
@@ -44,6 +44,9 @@
          <param name="controller/min_linear_velocity" value="$(arg min_linear_velocity)"/>
          <param name="controller/max_angular_velocity" value="$(arg max_angular_velocity)"/>
          <param name="controller/min_angular_velocity" value="$(arg min_angular_velocity)"/>
+
+         <remap from="odom"      to="$(arg topic_odom)"/>
+         <remap from="cmd_vel"   to="$(arg topic_cmd)"/>
       </node>
 
       <group if="$(arg use_map)">

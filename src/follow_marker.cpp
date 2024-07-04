@@ -19,7 +19,9 @@ class FollowMarker
 		std::string repeat_mode_ = "none";
 		bool following_reverse_ = true;
 
-		geometry_msgs::Pose target_pre;
+		geometry_msgs::Pose target_pre_;
+		size_t target_path_size_pre_;
+		bool trajectory_recording_pre_;
 
 		dynamic_reconfigure::Server<controller_tutorial::FollowMarkerConfig> *dsrv_;
 
@@ -60,7 +62,7 @@ FollowMarker::FollowMarker(potbot_lib::InteractiveMarkerManager* imm)
 	dynamic_reconfigure::Server<controller_tutorial::FollowMarkerConfig>::CallbackType cb = boost::bind(&FollowMarker::reconfigureCB, this, _1, _2);
 	dsrv_->setCallback(cb);
 
-	target_pre = potbot_lib::utility::get_Pose(1e100,1e100,1e100,1e100,1e100,1e100);
+	target_pre_ = potbot_lib::utility::get_Pose(1e100,1e100,1e100,1e100,1e100,1e100);
 }
 
 void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
@@ -68,10 +70,45 @@ void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
 	const auto visual_markers = ims_->getVisualMarker();
 	const auto target = visual_markers->begin()->marker.pose;
 	const auto target_path = &visual_markers->begin()->trajectory;
+	const auto trajectory_recording = visual_markers->begin()->trajectory_recording;
 
-	if (target != target_pre || (repeat_mode_ != "none" && ddr_->reachedTarget()))
+	if (target != target_pre_ ||
+		target_path_size_pre_ != target_path->size() ||
+		trajectory_recording_pre_ != trajectory_recording ||
+		(repeat_mode_ != "none" && ddr_->reachedTarget()))
 	{
-		if (target_path->empty())
+		if (trajectory_recording)
+		{
+			if (!target_path->empty())
+			{
+				std::vector<geometry_msgs::PoseStamped> target_path_tmp = *target_path;
+				if (repeat_mode_ == "reverse" && ddr_->reachedTarget())
+				{
+					if (following_reverse_)
+					{
+						std::reverse(target_path_tmp.begin(), target_path_tmp.end());
+					}
+					following_reverse_ = !following_reverse_;
+				}
+				
+				nav_msgs::Path path_msg;
+				path_msg.header = msg.header;
+				path_msg.poses = target_path_tmp;
+				pub_path_.publish(path_msg);
+
+				ddr_->setTargetPose(target_path_tmp.back().pose);
+				ddr_->setTargetPath(target_path_tmp);
+			}
+			else
+			{
+				nav_msgs::Path path_msg;
+				path_msg.header = msg.header;
+				pub_path_.publish(path_msg);
+				ddr_->setTargetPose(msg.pose.pose);
+				ddr_->setTargetPath(path_msg.poses);
+			}
+		}
+		else
 		{
 			if (!path_from_csv_.empty())
 			{
@@ -106,28 +143,10 @@ void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
 				ddr_->setTargetPath(path_msg.poses);
 			}
 		}
-		else
-		{
-			std::vector<geometry_msgs::PoseStamped> target_path_tmp = *target_path;
-			if (repeat_mode_ == "reverse" && ddr_->reachedTarget())
-			{
-				if (following_reverse_)
-				{
-					std::reverse(target_path_tmp.begin(), target_path_tmp.end());
-				}
-				following_reverse_ = !following_reverse_;
-			}
-			
-			nav_msgs::Path path_msg;
-			path_msg.header = msg.header;
-			path_msg.poses = target_path_tmp;
-			pub_path_.publish(path_msg);
-
-			ddr_->setTargetPose(target_path_tmp.back().pose);
-			ddr_->setTargetPath(target_path_tmp);
-		}
 	}
-	target_pre = target;
+	target_pre_ = target;
+	target_path_size_pre_ = target_path->size();
+	trajectory_recording_pre_ = trajectory_recording;
 
 	ddr_->setRobot(msg);
 	geometry_msgs::Twist cmd;
