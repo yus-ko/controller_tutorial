@@ -29,6 +29,7 @@
       </group>
 
       <node pkg="tf" type="static_transform_publisher" name="map_tf" args="0 0 0 0 0 0 $(arg frame_id_global) $(arg frame_id_odom) 60" />
+      <node pkg="tf" type="static_transform_publisher" name="base_tf" args="0 0 0 0 0 0 $(arg frame_id_global) base_link 60" />
 
       <node pkg="controller_tutorial"  name="follow_marker" type="follow_marker" output="screen">
          <param name="controller_name" value="potbot_lib/PurePursuit"/>

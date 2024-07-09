@@ -1,37 +1,4 @@
-#include <potbot_lib/base_controller.h>
-#include <potbot_lib/interactive_marker_manager.h>
-#include <potbot_lib/apf_path_planner_ros.h>
-#include <pluginlib/class_loader.h>
-#include <dynamic_reconfigure/server.h>
-#include <controller_tutorial/FollowMarkerConfig.h>
-
-class FollowMarker
-{
-	private:
-		ros::Publisher pub_cmd_, pub_path_;
-		ros::Subscriber sub_odom_;
-		boost::shared_ptr<potbot_lib::controller::BaseController> ddr_;
-		potbot_lib::InteractiveMarkerManager* ims_;
-
-		std::string path_csvfile_ = "";
-		std::vector<geometry_msgs::PoseStamped> path_from_csv_;
-
-		std::string repeat_mode_ = "none";
-		bool following_reverse_ = true;
-
-		geometry_msgs::Pose target_pre_;
-		size_t target_path_size_pre_;
-		bool trajectory_recording_pre_;
-
-		dynamic_reconfigure::Server<controller_tutorial::FollowMarkerConfig> *dsrv_;
-
-		void odomCallback(const nav_msgs::Odometry& msg);
-		void reconfigureCB(const controller_tutorial::FollowMarkerConfig& param, uint32_t level);
-
-	public:
-		FollowMarker(potbot_lib::InteractiveMarkerManager* imm);
-		~FollowMarker(){};
-};
+#include <controller_tutorial/follow_marker.h>
 
 FollowMarker::FollowMarker(potbot_lib::InteractiveMarkerManager* imm)
 {
@@ -47,6 +14,23 @@ FollowMarker::FollowMarker(potbot_lib::InteractiveMarkerManager* imm)
 	{
 		ddr_ = loader.createInstance(plugin_name);
 		ddr_->initialize("controller");
+	}
+	catch(pluginlib::PluginlibException& ex)
+	{
+		ROS_ERROR("failed to load plugin. Error: %s", ex.what());
+	}
+
+	pluginlib::ClassLoader<nav_core::BaseLocalPlanner> loader2("nav_core", "nav_core::BaseLocalPlanner");
+	// std::string plugin_name = "potbot_lib/PurePursuit";
+	// n.getParam("controller_name", plugin_name);
+	try
+	{
+		nbc_ = loader2.createInstance("potbot_nav/PotbotLocalPlanner");
+
+		tf2_ros::Buffer buffer;
+		tf2_ros::TransformListener tf(buffer);
+		costmap_2d::Costmap2DROS costmap_ros("local_costmap", buffer);
+		nbc_->initialize("controller",&buffer,&costmap_ros);
 	}
 	catch(pluginlib::PluginlibException& ex)
 	{
