@@ -1,7 +1,10 @@
 <launch>
    <arg name="multi_robot"             default="robot_0"/>
-   <arg name="path_csvfile"            default="$(find controller_tutorial)/path/sin.csv"/>
+   <arg name="path_name"               default="sin"/>
+   <arg name="follower"                default="PurePursuit"/>
+   <arg name="path_csvfile"            default="$(find controller_tutorial)/path/$(arg path_name).csv"/>
    <arg name="repeat_mode"             default="reverse"/>
+   <arg name="publish_command"         default="true"/>
    <arg name="use_rviz"                default="true"/>
    <arg name="use_remote"              default="true"/>
    <arg name="use_map"                 default="false"/>
@@ -28,15 +31,14 @@
          </include>
       </group>
 
-      <node pkg="tf" type="static_transform_publisher" name="map_tf" args="0 0 0 0 0 0 $(arg frame_id_global) $(arg frame_id_odom) 60" />
-      <node pkg="tf" type="static_transform_publisher" name="base_tf" args="0 0 0 0 0 0 $(arg frame_id_global) base_link 60" />
+      <node pkg="tf" type="static_transform_publisher" name="map_tf_controller" args="0 0 0 0 0 0 $(arg frame_id_global) $(arg frame_id_odom) 60" />
 
       <node pkg="controller_tutorial"  name="follow_marker" type="follow_marker" output="screen">
-         <param name="controller_name" value="potbot_lib/PurePursuit"/>
-         <!-- <param name="controller_name" value="potbot_lib/DWA"/> -->
+         <param name="controller_name" value="potbot_nav/$(arg follower)"/>
 
          <param name="path_csvfile"    value="$(arg path_csvfile)"/>
          <param name="repeat_mode"     value="$(arg repeat_mode)"/>
+         <param name="publish_command" value="$(arg publish_command)"/>
          
          <rosparam file="$(arg file_marker)"  command="load" ns="target" />
          <!-- <param name="target/target_marker/trajectory_recording"    value="true"/> -->

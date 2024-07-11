@@ -1,36 +1,54 @@
-#include <controller_tutorial/follow_marker.h>
+#include <potbot_base/base_controller.h>
+#include <potbot_lib/interactive_marker_manager.h>
+#include <potbot_lib/apf_path_planner_ros.h>
+#include <pluginlib/class_loader.h>
+#include <dynamic_reconfigure/server.h>
+#include <controller_tutorial/FollowMarkerConfig.h>
 
-FollowMarker::FollowMarker(potbot_lib::InteractiveMarkerManager* imm)
+class FollowMarker
+{
+	private:
+		ros::Publisher pub_cmd_, pub_path_;
+		ros::Subscriber sub_odom_;
+		boost::shared_ptr<potbot_base::Controller> ddr_;
+		pluginlib::ClassLoader<potbot_base::Controller> loader_;
+		potbot_lib::InteractiveMarkerManager* ims_;
+
+		std::string path_csvfile_ = "";
+		std::vector<geometry_msgs::PoseStamped> path_from_csv_;
+
+		bool publish_command_ = true;
+
+		std::string repeat_mode_ = "none";
+		bool following_reverse_ = true;
+
+		geometry_msgs::Pose target_pre_;
+		size_t target_path_size_pre_;
+		bool trajectory_recording_pre_;
+
+		dynamic_reconfigure::Server<controller_tutorial::FollowMarkerConfig> *dsrv_;
+
+		void odomCallback(const nav_msgs::Odometry& msg);
+		void reconfigureCB(const controller_tutorial::FollowMarkerConfig& param, uint32_t level);
+
+	public:
+		FollowMarker(potbot_lib::InteractiveMarkerManager* imm, tf2_ros::Buffer* tf);
+		~FollowMarker(){};
+};
+
+FollowMarker::FollowMarker(potbot_lib::InteractiveMarkerManager* imm, tf2_ros::Buffer* tf) : loader_("potbot_base", "potbot_base::Controller")
 {
 
 	ims_ = imm;
 
 	ros::NodeHandle n("~");
 	
-	pluginlib::ClassLoader<potbot_lib::controller::BaseController> loader("potbot_lib", "potbot_lib::controller::BaseController");
 	std::string plugin_name = "potbot_lib/PurePursuit";
 	n.getParam("controller_name", plugin_name);
 	try
 	{
-		ddr_ = loader.createInstance(plugin_name);
-		ddr_->initialize("controller");
-	}
-	catch(pluginlib::PluginlibException& ex)
-	{
-		ROS_ERROR("failed to load plugin. Error: %s", ex.what());
-	}
-
-	pluginlib::ClassLoader<nav_core::BaseLocalPlanner> loader2("nav_core", "nav_core::BaseLocalPlanner");
-	// std::string plugin_name = "potbot_lib/PurePursuit";
-	// n.getParam("controller_name", plugin_name);
-	try
-	{
-		nbc_ = loader2.createInstance("potbot_nav/PotbotLocalPlanner");
-
-		tf2_ros::Buffer buffer;
-		tf2_ros::TransformListener tf(buffer);
-		costmap_2d::Costmap2DROS costmap_ros("local_costmap", buffer);
-		nbc_->initialize("controller",&buffer,&costmap_ros);
+		ddr_ = loader_.createInstance(plugin_name);
+		ddr_->initialize("controller", tf);
 	}
 	catch(pluginlib::PluginlibException& ex)
 	{
@@ -80,7 +98,7 @@ void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
 				path_msg.poses = target_path_tmp;
 				pub_path_.publish(path_msg);
 
-				ddr_->setTargetPose(target_path_tmp.back().pose);
+				ddr_->setTargetPose(target_path_tmp.back());
 				ddr_->setTargetPath(target_path_tmp);
 			}
 			else
@@ -88,7 +106,10 @@ void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
 				nav_msgs::Path path_msg;
 				path_msg.header = msg.header;
 				pub_path_.publish(path_msg);
-				ddr_->setTargetPose(msg.pose.pose);
+				geometry_msgs::PoseStamped pose;
+				pose.header = msg.header;
+				pose.pose = msg.pose.pose;
+				ddr_->setTargetPose(pose);
 				ddr_->setTargetPath(path_msg.poses);
 			}
 		}
@@ -123,7 +144,7 @@ void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
 
 				pub_path_.publish(path_msg);
 
-				ddr_->setTargetPose(path_msg.poses.back().pose);
+				ddr_->setTargetPose(path_msg.poses.back());
 				ddr_->setTargetPath(path_msg.poses);
 			}
 		}
@@ -136,11 +157,13 @@ void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
 	geometry_msgs::Twist cmd;
 	ddr_->calculateCommand(cmd);
 
-	pub_cmd_.publish(cmd);
+	if (publish_command_) pub_cmd_.publish(cmd);
 }
 
 void FollowMarker::reconfigureCB(const controller_tutorial::FollowMarkerConfig& param, uint32_t level)
 {
+	publish_command_ = param.publish_command;
+
 	path_csvfile_ = param.path_csvfile;
 	nav_msgs::Path path_msg;
 	potbot_lib::path_planner::getPathMsgFromCsv(path_msg, path_csvfile_);
@@ -152,8 +175,11 @@ void FollowMarker::reconfigureCB(const controller_tutorial::FollowMarkerConfig& 
 int main(int argc,char **argv){
 	ros::init(argc,argv,"marker_controller");
 
+	tf2_ros::Buffer tf_buffer_;
+	tf2_ros::TransformListener tfListener(tf_buffer_);
+
 	potbot_lib::InteractiveMarkerManager imm("target");
-	FollowMarker fmc(&imm);
+	FollowMarker fmc(&imm, &tf_buffer_);
 
 	ros::spin();
 
