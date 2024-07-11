@@ -64,7 +64,7 @@ FollowMarker::FollowMarker(potbot_lib::InteractiveMarkerManager* imm, tf2_ros::B
 	dynamic_reconfigure::Server<controller_tutorial::FollowMarkerConfig>::CallbackType cb = boost::bind(&FollowMarker::reconfigureCB, this, _1, _2);
 	dsrv_->setCallback(cb);
 
-	target_pre_ = potbot_lib::utility::get_Pose(1e100,1e100,1e100,1e100,1e100,1e100);
+	target_pre_ = potbot_lib::utility::get_pose(1e100,1e100,1e100,1e100,1e100,1e100);
 }
 
 void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
@@ -123,7 +123,7 @@ void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
 
 				double sx = target.position.x;
 				double sy = target.position.y;
-				double syaw = potbot_lib::utility::get_Yaw(target.orientation);
+				double syaw = tf2::getYaw(target.orientation);
 				for (auto& p:path_msg.poses)
 				{
 					double x = p.pose.position.x;
