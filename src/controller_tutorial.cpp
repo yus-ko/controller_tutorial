@@ -1,40 +1,42 @@
+#include <potbot_lib/pid.h>
+#include <potbot_lib/utility_ros.h>
 #include <ros/ros.h>
 #include <tf2/utils.h>
-#include <potbot_lib/diff_drive_controller.h>
 #include <potbot_msgs/ObstacleArray.h>
 #include <dynamic_reconfigure/server.h>
 #include <controller_tutorial/controller_tutorialConfig.h>
 #include <geometry_msgs/PoseArray.h>
 #include <random>
 
-std::vector<potbot_lib::controller::DiffDriveController> g_robot;
+std::vector<potbot_lib::controller::PID> g_robot;
+using namespace potbot_lib::utility;
 
 void inipose_callback(const geometry_msgs::PoseWithCovarianceStamped& msg)
 {
 	nav_msgs::Odometry ini_pose;
-	ini_pose.header.frame_id = "map" ;
+	ini_pose.header.frame_id = "map";
 	ini_pose.pose = msg.pose;
-	for (auto& robo : g_robot) robo.setMsg(ini_pose);
+	for (auto& robo : g_robot) to_agent(ini_pose, robo);
 }
 
 void goal_callback(const geometry_msgs::PoseStamped& msg)
 {
-	g_robot[0].setTarget(	msg.pose.position.x,
-							msg.pose.position.y,
-							potbot_lib::utility::get_Yaw(msg.pose.orientation));
+	potbot_lib::Pose p;
+	p.position.x = msg.pose.position.x;
+	p.position.y = msg.pose.position.y;
+	p.position.z = msg.pose.position.z;
+	get_rpy(msg.pose.orientation, p.rotation.x, p.rotation.y, p.rotation.z);
+	for (auto& robo : g_robot) robo.setTargetPoint(p);
 }
 
 void param_callback(const controller_tutorial::controller_tutorialConfig& param, uint32_t level)
 {
-	g_robot[0].setGain(		param.gain_p,
-							param.gain_i,
-							param.gain_d);
-
-	g_robot[0].setMargin(	param.stop_margin_angle,
-							param.stop_margin_distance);
-
-	g_robot[0].setLimit(	param.max_linear_velocity,
-							param.max_angular_velocity);
+	for (auto& robo : g_robot)
+	{
+		robo.setGain(param.gain_p, param.gain_i, param.gain_d);
+		robo.setMargin(param.stop_margin_angle, param.stop_margin_distance);
+		robo.setLimit(param.max_linear_velocity, param.max_angular_velocity);
+	}
 }
 
 int main(int argc,char **argv){
@@ -85,12 +87,12 @@ int main(int argc,char **argv){
 
 	nav_msgs::Odometry robot_pose;
 	robot_pose.header.frame_id = "map";
-	robot_pose.pose.pose = potbot_lib::utility::get_Pose(0,0,0,0,0,0);	//ロボット初期位置 x y z r p y
+	robot_pose.pose.pose = get_pose(0,0,0,0,0,0);	//ロボット初期位置 x y z r p y
 
 	for (auto& robo : g_robot)
 	{
-		robo.deltatime = 1.0/control_frequency;;
-		robo.setMsg(robot_pose);
+		robo.deltatime = 1.0/control_frequency;
+		to_agent(robot_pose, robo);
 	}
 
 	std::random_device rd;
@@ -103,18 +105,20 @@ int main(int argc,char **argv){
 
 	while (ros::ok())
 	{
-
-		g_robot[0].pidControl();
-		g_robot[0].update();
+		for (auto& robo : g_robot)
+		{
+			robo.calculateCommand();
+			robo.update();
+		}
 		
-		g_robot[0].toMsg(robot_pose);
+		to_msg(g_robot.front(), robot_pose);
 
 		pub_odom_truth.publish(robot_pose);
 		
 		robot_pose.pose.pose.position.x += distribution_x(generator);
 		robot_pose.pose.pose.position.y += distribution_y(generator);
 		double yaw = tf2::getYaw(robot_pose.pose.pose.orientation);
-		robot_pose.pose.pose.orientation = potbot_lib::utility::get_Quat(0,0,yaw+distribution_yaw(generator));
+		robot_pose.pose.pose.orientation = get_quat(0,0,yaw+distribution_yaw(generator));
 		robot_pose.twist.twist.linear.x += distribution_linear_velocity(generator);
 		robot_pose.twist.twist.angular.z += distribution_angular_velocity(generator);
 

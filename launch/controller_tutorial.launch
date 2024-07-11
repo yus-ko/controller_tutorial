@@ -5,10 +5,7 @@
          <!-- 制御周期 Hz -->
          <param name="control_frequency"                       value="50.0"/>
 
-         <!-- 生成するパーティクル数 -->
-         <param name="particle_num"                            value="1000"/>
-
-         <!-- パーティクル移動時のノイズパラメータ -->
+         <!-- 移動時のノイズパラメータ -->
          <param name="norm_noise_mean_linear_velocity"         value="0.0"/>
          <param name="norm_noise_variance_linear_velocity"     value="0.1"/>
          <param name="norm_noise_mean_angular_velocity"        value="0.0"/>
