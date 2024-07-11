@@ -33,7 +33,7 @@ class FollowMarker
 
 	public:
 		FollowMarker(potbot_lib::InteractiveMarkerManager* imm, tf2_ros::Buffer* tf);
-		~FollowMarker(){};
+		~FollowMarker();
 };
 
 FollowMarker::FollowMarker(potbot_lib::InteractiveMarkerManager* imm, tf2_ros::Buffer* tf) : loader_("potbot_base", "potbot_base::Controller")
@@ -67,6 +67,11 @@ FollowMarker::FollowMarker(potbot_lib::InteractiveMarkerManager* imm, tf2_ros::B
 	target_pre_ = potbot_lib::utility::get_pose(1e100,1e100,1e100,1e100,1e100,1e100);
 }
 
+FollowMarker::~FollowMarker()
+{
+	if (dsrv_) delete dsrv_;
+}
+
 void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
 {
 	const auto visual_markers = ims_->getVisualMarker();
@@ -98,8 +103,12 @@ void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
 				path_msg.poses = target_path_tmp;
 				pub_path_.publish(path_msg);
 
-				ddr_->setTargetPose(target_path_tmp.back());
+				geometry_msgs::PoseStamped goal;
+				goal.pose = target;
+				// ddr_->setTargetPose(target_path_tmp.back());
+				
 				ddr_->setTargetPath(target_path_tmp);
+				ddr_->setTargetPose(goal);
 			}
 			else
 			{
@@ -179,6 +188,7 @@ int main(int argc,char **argv){
 	tf2_ros::TransformListener tfListener(tf_buffer_);
 
 	potbot_lib::InteractiveMarkerManager imm("target");
+
 	FollowMarker fmc(&imm, &tf_buffer_);
 
 	ros::spin();
