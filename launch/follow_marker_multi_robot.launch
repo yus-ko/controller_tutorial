@@ -1,0 +1,27 @@
+<launch>
+
+   <include file="$(find controller_tutorial)/launch/follow_marker.launch">
+      <arg name="multi_robot"          value="robot_1"/>
+      <arg name="path_name"            value="straight"/>
+      <arg name="repeat_mode"          value="none"/>
+      <arg name="use_rviz"             value="false"/>
+      <arg name="file_marker"          value="$(find controller_tutorial)/config/target_markers_1.yaml"/>
+   </include>
+
+   <include file="$(find controller_tutorial)/launch/follow_marker.launch">
+      <arg name="multi_robot"          value="robot_2"/>
+      <arg name="path_name"            value="straight"/>
+      <arg name="repeat_mode"          value="none"/>
+      <arg name="use_rviz"             value="false"/>
+      <arg name="file_marker"          value="$(find controller_tutorial)/config/target_markers_2.yaml"/>
+   </include>
+
+   <include file="$(find controller_tutorial)/launch/follow_marker.launch">
+      <arg name="multi_robot"          value="robot_3"/>
+      <arg name="path_name"            value="straight"/>
+      <arg name="repeat_mode"          value="none"/>
+      <arg name="use_rviz"             value="false"/>
+      <arg name="file_marker"          value="$(find controller_tutorial)/config/target_markers_3.yaml"/>
+   </include>
+
+</launch>

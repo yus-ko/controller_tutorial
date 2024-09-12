@@ -1,0 +1,12 @@
+markers: 
+  - {name: "target_marker_2"}
+  
+target_marker_2: { 
+  type: "sphere", 
+  trajectory_recording: false, 
+  trajectory_marker_type: "line",
+  trajectory_interpolation_method: "spline",
+  initial_pose: {x: 2.0, y: 1.0, z: 0.0, roll: 0.0, pitch: 0.0, yaw: 1.57}, 
+  scale: {x: 0.08, y: 0.08, z: 0.08}, 
+  color: {r: 0.7, g: 0.7, b: 0.0, a: 1.0}
+}
