@@ -72,6 +72,18 @@ FollowMarker::~FollowMarker()
 	if (dsrv_) delete dsrv_;
 }
 
+bool comp(const geometry_msgs::Pose& p1, const geometry_msgs::Pose& p2)
+{
+	return
+		p1.position.x == p2.position.x &&
+		p1.position.y == p2.position.y &&
+		p1.position.z == p2.position.z &&
+		p1.orientation.x == p2.orientation.x &&
+		p1.orientation.y == p2.orientation.y &&
+		p1.orientation.z == p2.orientation.z &&
+		p1.orientation.w == p2.orientation.w;
+}
+
 void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
 {
 	const auto visual_markers = ims_->getVisualMarker();
@@ -79,7 +91,7 @@ void FollowMarker::odomCallback(const nav_msgs::Odometry& msg)
 	const auto target_path = &visual_markers->begin()->trajectory;
 	const auto trajectory_recording = visual_markers->begin()->trajectory_recording;
 
-	if (target != target_pre_ ||
+	if (!comp(target, target_pre_) ||
 		target_path_size_pre_ != target_path->size() ||
 		trajectory_recording_pre_ != trajectory_recording ||
 		(repeat_mode_ != "none" && ddr_->reachedTarget()))
