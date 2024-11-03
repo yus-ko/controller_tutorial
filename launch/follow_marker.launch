@@ -6,16 +6,11 @@
    <arg name="repeat_mode"             default="reverse"/>
    <arg name="publish_command"         default="true"/>
    <arg name="use_rviz"                default="true"/>
-   <arg name="use_remote"              default="true"/>
-   <arg name="use_map"                 default="false"/>
    <arg name="frame_id_global"         default="map"/>
    <arg name="frame_id_odom"           default="$(arg multi_robot)/odom"/>
    <arg name="topic_cmd"               default="cmd_vel"/>
    <arg name="topic_odom"              default="odom"/>
    <arg name="topic_goal"              default="goal"/>
-   <arg name="model"                   default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
-   <arg name="file_urdf"               default="$(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro"/>
-   <arg name="file_map"                default="$(find potbot_description)/maps/garage.yaml"/>
    <arg name="file_marker"             default="$(find controller_tutorial)/config/target_markers.yaml"/>
    <arg name="max_linear_velocity"     default="0.3"/>
    <arg name="min_linear_velocity"     default="-0.3"/>
@@ -23,13 +18,6 @@
    <arg name="min_angular_velocity"    default="-1.5"/>
 
    <group ns="$(arg multi_robot)">
-
-      <group if="$(arg use_remote)">
-         <include file="$(find potbot)/launch/env/remote.launch">
-            <arg name="urdf_file"               value="$(find xacro)/xacro --inorder '$(arg file_urdf)'"/>
-            <arg name="multi_robot_name"        value="$(arg multi_robot)"/>
-         </include>
-      </group>
 
       <node pkg="tf" type="static_transform_publisher" name="map_tf_controller" args="0 0 0 0 0 0 $(arg frame_id_global) $(arg frame_id_odom) 60" />
 
@@ -51,10 +39,6 @@
          <remap from="odom"      to="$(arg topic_odom)"/>
          <remap from="cmd_vel"   to="$(arg topic_cmd)"/>
       </node>
-
-      <group if="$(arg use_map)">
-         <node pkg="map_server" type="map_server" name="map_server" args="$(arg file_map)"/>
-      </group>
       
       <group if="$(arg use_rviz)">
          <node pkg="rviz" type="rviz" name="rviz" required="true" args="-d $(find controller_tutorial)/rviz/follow_marker.rviz"/>
